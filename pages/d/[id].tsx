@@ -51,7 +51,7 @@ export default function Home() {
 
   return (
     <div className="todoapp">
-      <App rep={rep} />
+      <App rep={rep} repKey="demo/yjs/one" />
     </div>
   );
 }

@@ -7,7 +7,7 @@ import {
   setLastMutationID,
 } from "./data";
 import { ReplicacheTransaction } from "./replicache-transaction";
-import { mutators } from "../frontend/mutators";
+import { mutators } from "./mutators";
 import { z } from "zod";
 import { parseIfDebug } from "@rocicorp/rails";
 import Pusher from "pusher";

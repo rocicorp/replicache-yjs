@@ -10,105 +10,60 @@ import { useSubscribe } from "replicache-react";
 
 type M = typeof mutators;
 
-const App = ({ rep }: { rep: Replicache<M> }) => {
-  const ydocRef = useRef(new Y.Doc());
-  const ydoc = ydocRef.current;
-  const yText = ydoc.getText("codemirror");
-  const [serverText, setServerText] = useState<string>(yText.toJSON());
-
-  const [docState, setDocState] = useState(
-    base64.fromByteArray(Y.encodeStateAsUpdateV2(ydoc))
-  );
-
-  useEffect(() => {
-    const f = () => {
-      const update = Y.encodeStateAsUpdateV2(ydoc);
-      setServerText(yText.toJSON());
-      setDocState(base64.fromByteArray(update));
-      console.groupEnd();
-    };
-    yText.observe(f);
-    return () => {
-      yText.unobserve(f);
-    };
-  }, [yText]);
-
-  useEffect(() => {
-    const text = "Hello World";
-    yText.insert(0, text);
-    const update = Y.encodeStateAsUpdateV2(ydoc);
-    setDocState(base64.fromByteArray(update));
-  }, []);
-
-  const onUpdate = useCallback(
-    (clientDocState: string) => {
-      Y.applyUpdateV2(ydoc, base64.toByteArray(clientDocState));
-    },
-    [ydoc]
-  );
-
-  return (
-    <>
-      <section>
-        <h3>Server</h3>
-        <pre>{serverText}</pre>
-      </section>
-      <section>
-        <h3>Client 1</h3>
-        <Test docState={docState} onUpdate={onUpdate} />
-      </section>
-      <section>
-        <h3>Client 2</h3>
-        <Test docState={docState} onUpdate={onUpdate} />
-      </section>
-    </>
-  );
+const App = ({ rep, repKey }: { rep: Replicache<M>; repKey: string }) => {
+  return <RepCodeMirror rep={rep} repKey={repKey} />;
 };
 
-function Test({
-  docState,
-  onUpdate,
+function RepCodeMirror({
+  rep,
+  repKey,
 }: {
-  docState: string;
-  onUpdate: (docState: string) => void;
+  rep: Replicache<M>;
+  repKey: string;
 }) {
   const ydocRef = useRef(new Y.Doc());
   const ydoc = ydocRef.current;
-  const update = base64.toByteArray(docState);
-  Y.applyUpdateV2(ydoc, update);
   const yText = ydoc.getText("codemirror");
   const bindingRef = useRef<CodemirrorBinding | null>(null);
 
+  const docStateFromReplicache = useSubscribe(
+    rep,
+    async (tx) => {
+      const v = await tx.get(repKey);
+      if (typeof v === "string") {
+        return v;
+      }
+      return null;
+    },
+    null
+  );
+
+  if (docStateFromReplicache !== null) {
+    const update = base64.toByteArray(docStateFromReplicache);
+    Y.applyUpdateV2(ydoc, update);
+  }
+
   useEffect(() => {
-    const f = () => {
+    const f = async () => {
       const update = Y.encodeStateAsUpdateV2(ydoc);
-      onUpdate(base64.fromByteArray(update));
+      await rep.mutate.updateYJS({
+        key: repKey,
+        update: base64.fromByteArray(update),
+      });
     };
     yText.observe(f);
     return () => {
       yText.unobserve(f);
     };
-  }, [yText]);
+  }, [yText, repKey]);
 
   return (
-    <div style={{ margin: 10, border: "1px solid" }}>
-      <CodeMirror
-        // value={value}
-        // onBeforeChange={(editor, data, value) => {
-        //   setValue(value);
-        // }}
-        onChange={(editor, data, value) => {
-          // console.log(editor, data, value);
-        }}
-        editorDidMount={(editor) => {
-          // console.log("editorDidMount", editor);
-          // if (typeof window !== "undefined") {
-          const binding = new CodemirrorBinding(yText, editor);
-          bindingRef.current = binding;
-          // }
-        }}
-      />
-    </div>
+    <CodeMirror
+      editorDidMount={(editor) => {
+        const binding = new CodemirrorBinding(yText, editor);
+        bindingRef.current = binding;
+      }}
+    />
   );
 }
 
