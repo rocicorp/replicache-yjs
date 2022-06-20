@@ -1,41 +1,54 @@
 import { UnControlled as CodeMirror } from "react-codemirror2";
 import "codemirror/lib/codemirror.css";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import * as Y from "yjs";
+import * as yprotocolAwareness from "y-protocols/awareness.js";
 import { CodemirrorBinding } from "y-codemirror";
 import * as base64 from "base64-js";
-import { mutators } from "./mutators.js";
+import { awarenessKeyPrefix, editorKey, mutators } from "./mutators";
 import type { Replicache } from "replicache";
 import { useSubscribe } from "replicache-react";
 
 type M = typeof mutators;
 
-const App = ({ rep, repKey }: { rep: Replicache<M>; repKey: string }) => {
-  return <RepCodeMirror rep={rep} repKey={repKey} />;
+type RepCodeMirrorProps = {
+  rep: Replicache<M>;
+  editorID: string;
+  cursorColor: string;
+  userName: string;
 };
 
 function RepCodeMirror({
   rep,
-  repKey,
-}: {
-  rep: Replicache<M>;
-  repKey: string;
-}) {
+  editorID,
+  cursorColor,
+  userName,
+}: RepCodeMirrorProps) {
   const ydocRef = useRef(new Y.Doc());
   const ydoc = ydocRef.current;
   const yText = ydoc.getText("codemirror");
   const bindingRef = useRef<CodemirrorBinding | null>(null);
+  const awarenessRef = useRef(new yprotocolAwareness.Awareness(ydoc));
+  const awareness = awarenessRef.current;
+
+  useEffect(() => {
+    awareness.setLocalStateField("user", {
+      color: cursorColor,
+      name: userName,
+    });
+  }, [cursorColor, userName]);
 
   const docStateFromReplicache = useSubscribe(
     rep,
     async (tx) => {
-      const v = await tx.get(repKey);
+      const v = await tx.get(editorKey(editorID));
       if (typeof v === "string") {
         return v;
       }
       return null;
     },
-    null
+    null,
+    [editorID]
   );
 
   if (docStateFromReplicache !== null) {
@@ -47,7 +60,7 @@ function RepCodeMirror({
     const f = async () => {
       const update = Y.encodeStateAsUpdateV2(ydoc);
       await rep.mutate.updateYJS({
-        key: repKey,
+        name: editorID,
         update: base64.fromByteArray(update),
       });
     };
@@ -55,16 +68,75 @@ function RepCodeMirror({
     return () => {
       yText.unobserve(f);
     };
-  }, [yText, repKey]);
+  }, [yText, editorID]);
+
+  const awarenessStateFromReplicache = useSubscribe(
+    rep,
+    async (tx) =>
+      tx
+        .scan({ prefix: awarenessKeyPrefix(editorID) })
+        .values()
+        .toArray(),
+    [],
+    [editorID]
+  );
+  for (const value of awarenessStateFromReplicache) {
+    if (typeof value === "string") {
+      yprotocolAwareness.applyAwarenessUpdate(
+        awareness,
+        base64.toByteArray(value),
+        "origin"
+      );
+    }
+  }
+
+  useEffect(() => {
+    const f = async ({
+      added,
+      updated,
+      removed,
+    }: {
+      added: number[];
+      updated: number[];
+      removed: number[];
+    }) => {
+      // Remove clients that have not pinged in a while.
+      for (const removedClient of removed) {
+        await rep.mutate.removeYJSAwareness({
+          name: editorID,
+          yjsClientID: removedClient,
+        });
+      }
+
+      if (
+        added.includes(awareness.clientID) ||
+        updated.includes(awareness.clientID) ||
+        removed.includes(awareness.clientID)
+      ) {
+        const update = yprotocolAwareness.encodeAwarenessUpdate(awareness, [
+          awareness.clientID,
+        ]);
+        void rep.mutate
+          .updateYJSAwareness({
+            name: editorID,
+            yjsClientID: awareness.clientID,
+            update: base64.fromByteArray(update),
+          })
+          .catch((err) => console.error(err));
+      }
+    };
+    awareness.on("change", f);
+    return () => awareness.off("change", f);
+  }, [awareness]);
 
   return (
     <CodeMirror
       editorDidMount={(editor) => {
-        const binding = new CodemirrorBinding(yText, editor);
+        const binding = new CodemirrorBinding(yText, editor, awareness);
         bindingRef.current = binding;
       }}
     />
   );
 }
 
-export default App;
+export default RepCodeMirror;

@@ -1,9 +1,11 @@
 import * as base64 from "base64-js";
 import * as Y from "yjs";
-import type { M } from "../frontend/mutators";
+import { editorKey, M, mutators as feMutators } from "../frontend/mutators";
 
 export const mutators: M = {
-  async updateYJS(tx, { key, update }) {
+  ...feMutators,
+  async updateYJS(tx, { name: name, update }) {
+    const key = editorKey(name);
     const oldYdocState = await tx.get(key);
     if (typeof oldYdocState === "string") {
       const oldUpdate = base64.toByteArray(oldYdocState);
