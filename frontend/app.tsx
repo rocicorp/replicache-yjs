@@ -6,7 +6,7 @@ import * as yprotocolAwareness from "y-protocols/awareness.js";
 import { CodemirrorBinding } from "y-codemirror";
 import * as base64 from "base64-js";
 import { awarenessKeyPrefix, editorKey, mutators } from "./mutators";
-import type { Replicache } from "replicache";
+import type { MutatorDefs, Replicache, WriteTransaction } from "replicache";
 import { useSubscribe } from "replicache-react";
 
 type M = typeof mutators;
@@ -28,47 +28,8 @@ function RepCodeMirror({
   const ydoc = ydocRef.current;
   const yText = ydoc.getText("codemirror");
   const bindingRef = useRef<CodemirrorBinding | null>(null);
-  const awarenessRef = useRef(new yprotocolAwareness.Awareness(ydoc));
-  const awareness = awarenessRef.current;
 
-  useEffect(() => {
-    awareness.setLocalStateField("user", {
-      color: cursorColor,
-      name: userName,
-    });
-  }, [cursorColor, userName]);
-
-  const docStateFromReplicache = useSubscribe(
-    rep,
-    async (tx) => {
-      const v = await tx.get(editorKey(editorID));
-      if (typeof v === "string") {
-        return v;
-      }
-      return null;
-    },
-    null,
-    [editorID]
-  );
-
-  if (docStateFromReplicache !== null) {
-    const update = base64.toByteArray(docStateFromReplicache);
-    Y.applyUpdateV2(ydoc, update);
-  }
-
-  useEffect(() => {
-    const f = async () => {
-      const update = Y.encodeStateAsUpdateV2(ydoc);
-      await rep.mutate.updateYJS({
-        name: editorID,
-        update: base64.fromByteArray(update),
-      });
-    };
-    yText.observe(f);
-    return () => {
-      yText.unobserve(f);
-    };
-  }, [yText, editorID]);
+  useYJSReplicache(rep, editorID, yText);
 
   const awarenessStateFromReplicache = useSubscribe(
     rep,
@@ -80,8 +41,11 @@ function RepCodeMirror({
     [],
     [editorID]
   );
+  const awarenessRef = useRef(new yprotocolAwareness.Awareness(ydoc));
+  const awareness = awarenessRef.current;
+
   for (const value of awarenessStateFromReplicache) {
-    if (typeof value === "string") {
+    if (typeof value === "string" && awarenessRef.current) {
       yprotocolAwareness.applyAwarenessUpdate(
         awareness,
         base64.toByteArray(value),
@@ -89,6 +53,13 @@ function RepCodeMirror({
       );
     }
   }
+
+  useEffect(() => {
+    awareness.setLocalStateField("user", {
+      color: cursorColor,
+      name: userName,
+    });
+  }, [cursorColor, userName]);
 
   useEffect(() => {
     const f = async ({
@@ -140,3 +111,53 @@ function RepCodeMirror({
 }
 
 export default RepCodeMirror;
+
+type UpdateYJS = {
+  updateYJS: (
+    tx: WriteTransaction,
+    { name, update }: { name: string; update: string }
+  ) => Promise<void>;
+};
+
+function useYJSReplicache(
+  rep: Replicache<UpdateYJS>,
+  editorID: string,
+  yText: Y.Text
+) {
+  const ydoc = yText.doc;
+  if (!ydoc) {
+    return;
+  }
+
+  const docStateFromReplicache = useSubscribe(
+    rep,
+    async (tx) => {
+      const v = await tx.get(editorKey(editorID));
+      if (typeof v === "string") {
+        return v;
+      }
+      return null;
+    },
+    null,
+    [editorID]
+  );
+
+  if (docStateFromReplicache !== null) {
+    const update = base64.toByteArray(docStateFromReplicache);
+    Y.applyUpdateV2(ydoc, update);
+  }
+
+  useEffect(() => {
+    const f = async () => {
+      const update = Y.encodeStateAsUpdateV2(ydoc);
+      await rep.mutate.updateYJS({
+        name: editorID,
+        update: base64.fromByteArray(update),
+      });
+    };
+    yText.observe(f);
+    return () => {
+      yText.unobserve(f);
+    };
+  }, [yText, editorID]);
+}
