@@ -1,38 +1,59 @@
+import { Reflect } from "@rocicorp/reflect/client";
+import { nanoid } from "nanoid";
+import React, { useEffect, useRef, useState } from "react";
+import { UserInfo, randUserInfo } from "./client-state.js";
+import {
+  UpdateYJS,
+  awarenessKeyPrefix,
+  editorKey,
+  mutators,
+} from "./mutators.js";
 import { UnControlled as CodeMirror } from "react-codemirror2";
 import "codemirror/lib/codemirror.css";
-import React, { useEffect, useRef, useState } from "react";
 import * as Y from "yjs";
 import * as yprotocolAwareness from "y-protocols/awareness.js";
 import { CodemirrorBinding } from "y-codemirror";
 import * as base64 from "base64-js";
-import { awarenessKeyPrefix, editorKey, mutators } from "./mutators";
-import type { MutatorDefs, Replicache, WriteTransaction } from "replicache";
-import { useSubscribe } from "replicache-react";
+import { render } from "react-dom";
+import { useSubscribe } from "@rocicorp/reflect/react";
 
-type M = typeof mutators;
+const userID = nanoid();
+const roomID = "my-room";
+
+const server: string | undefined = import.meta.env.VITE_REFLECT_URL;
+if (!server) {
+  throw new Error("VITE_REFLECT_URL required");
+}
+
+const r = new Reflect({
+  server,
+  userID,
+  roomID,
+  auth: userID,
+  mutators,
+});
 
 type RepCodeMirrorProps = {
-  rep: Replicache<M>;
   editorID: string;
-  cursorColor: string;
-  userName: string;
+  userInfo: UserInfo;
 };
 
-function RepCodeMirror({
-  rep,
-  editorID,
-  cursorColor,
-  userName,
-}: RepCodeMirrorProps) {
+function ReflectCodeMirror({ userInfo, editorID }: RepCodeMirrorProps) {
+  useEffect(() => {
+    void (async () => {
+      await r.mutate.initClientState(userInfo);
+    })();
+  }, []);
+
   const ydocRef = useRef(new Y.Doc());
   const ydoc = ydocRef.current;
   const yText = ydoc.getText("codemirror");
   const bindingRef = useRef<CodemirrorBinding | null>(null);
 
-  useYJSReplicache(rep, editorID, yText);
+  useYJSReplicache(r, editorID, yText);
 
   const awarenessStateFromReplicache = useSubscribe(
-    rep,
+    r,
     async (tx) =>
       tx
         .scan({ prefix: awarenessKeyPrefix(editorID) })
@@ -56,10 +77,10 @@ function RepCodeMirror({
 
   useEffect(() => {
     awareness.setLocalStateField("user", {
-      color: cursorColor,
-      name: userName,
+      color: userInfo.color,
+      name: userInfo.name,
     });
-  }, [cursorColor, userName]);
+  }, [userInfo.color, userInfo.name]);
 
   useEffect(() => {
     const f = async ({
@@ -73,7 +94,7 @@ function RepCodeMirror({
     }) => {
       // Remove clients that have not pinged in a while.
       for (const removedClient of removed) {
-        await rep.mutate.removeYJSAwareness({
+        await r.mutate.removeYJSAwareness({
           name: editorID,
           yjsClientID: removedClient,
         });
@@ -87,7 +108,7 @@ function RepCodeMirror({
         const update = yprotocolAwareness.encodeAwarenessUpdate(awareness, [
           awareness.clientID,
         ]);
-        void rep.mutate
+        void r.mutate
           .updateYJSAwareness({
             name: editorID,
             yjsClientID: awareness.clientID,
@@ -110,17 +131,8 @@ function RepCodeMirror({
   );
 }
 
-export default RepCodeMirror;
-
-type UpdateYJS = {
-  updateYJS: (
-    tx: WriteTransaction,
-    { name, update }: { name: string; update: string }
-  ) => Promise<void>;
-};
-
 function useYJSReplicache(
-  rep: Replicache<UpdateYJS>,
+  r: Reflect<UpdateYJS>,
   editorID: string,
   yText: Y.Text
 ) {
@@ -130,7 +142,7 @@ function useYJSReplicache(
   }
 
   const docStateFromReplicache = useSubscribe(
-    rep,
+    r,
     async (tx) => {
       const v = await tx.get(editorKey(editorID));
       if (typeof v === "string") {
@@ -150,7 +162,7 @@ function useYJSReplicache(
   useEffect(() => {
     const f = async () => {
       const update = Y.encodeStateAsUpdateV2(ydoc);
-      await rep.mutate.updateYJS({
+      await r.mutate.updateYJS({
         name: editorID,
         update: base64.fromByteArray(update),
       });
@@ -160,4 +172,26 @@ function useYJSReplicache(
       yText.unobserve(f);
     };
   }, [yText, editorID]);
+}
+
+const rootElement = document.getElementById("root");
+if (rootElement === null) {
+  throw new Error("root element is null");
+}
+
+const userInfo = randUserInfo();
+
+render(
+  <React.StrictMode>
+    <ReflectCodeMirror userInfo={userInfo} editorID="one" />
+  </React.StrictMode>,
+  rootElement
+);
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(async () => {
+    // this makes sure that there is only one instance of the reflect client during hmr reloads
+    await r.close();
+    rootElement?.remove();
+  });
 }

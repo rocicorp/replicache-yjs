@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "lib": ["esnext"],
+    "moduleResolution": "node",
+    "declaration": true,
+    "incremental": true
+  },
+  "include": [
+    "**/*.ts",
+    "../subscriptions.ts",
+    "../client-state.ts",
+    "../mutators.ts"
+  ],
+  "extends": "../../tsconfig.json"
+}
