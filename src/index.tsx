@@ -16,6 +16,8 @@ import { CodemirrorBinding } from "y-codemirror";
 import * as base64 from "base64-js";
 import { render } from "react-dom";
 import { useSubscribe } from "@rocicorp/reflect/react";
+import styles from "./index.module.css";
+import "./index.css";
 
 const userID = nanoid();
 const roomID = "my-room";
@@ -122,12 +124,21 @@ function ReflectCodeMirror({ userInfo, editorID }: RepCodeMirrorProps) {
   }, [awareness]);
 
   return (
-    <CodeMirror
-      editorDidMount={(editor) => {
-        const binding = new CodemirrorBinding(yText, editor, awareness);
-        bindingRef.current = binding;
-      }}
-    />
+    <div className={styles.container}>
+      <h1>Reflect + yjs</h1>
+      <CodeMirror
+        editorDidMount={(editor) => {
+          const binding = new CodemirrorBinding(yText, editor, awareness);
+          bindingRef.current = binding;
+        }}
+        options={{
+          theme: "material",
+          lineNumbers: true,
+          showCursorWhenSelecting: true,
+          autoCursor: true,
+        }}
+      />
+    </div>
   );
 }
 
