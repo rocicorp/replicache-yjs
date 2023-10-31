@@ -6,7 +6,6 @@ import type {WriteTransaction} from '@rocicorp/reflect';
 import {Entity, generate} from '@rocicorp/rails';
 
 export type ClientState = Entity & {
-  cursor: {x: number; y: number} | null;
   userInfo: UserInfo;
 };
 
@@ -22,7 +21,6 @@ export {
   putClientState,
   updateClientState,
   listClientStateIDs,
-  clearCursor,
   randUserInfo,
 };
 
@@ -37,14 +35,10 @@ const {
 function initClientState(tx: WriteTransaction, userInfo: UserInfo) {
   return initImpl(tx, {
     id: tx.clientID,
-    cursor: null,
     userInfo,
   });
 }
 
-async function clearCursor(tx: WriteTransaction): Promise<void> {
-  await updateClientState(tx, {id: tx.clientID, cursor: null});
-}
 
 function randUserInfo(): UserInfo {
   const [avatar, name] = avatars[randInt(0, avatars.length - 1)];

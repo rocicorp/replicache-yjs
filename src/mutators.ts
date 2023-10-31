@@ -20,7 +20,6 @@ import type { WriteTransaction } from "@rocicorp/reflect";
 import { initClientState, updateClientState } from "./client-state.js";
 
 export const mutators = {
-  setCursor,
   initClientState,
   updateYJS,
   updateYJSAwareness,
@@ -36,12 +35,6 @@ export type UpdateYJS = {
   ) => Promise<void>;
 };
 
-async function setCursor(
-  tx: WriteTransaction,
-  { x, y }: { x: number; y: number }
-): Promise<void> {
-  await updateClientState(tx, { id: tx.clientID, cursor: { x, y } });
-}
 
 async function updateYJS(
   tx: WriteTransaction,
