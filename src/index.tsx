@@ -52,9 +52,9 @@ function ReflectCodeMirror({ userInfo, editorID }: RepCodeMirrorProps) {
   const yText = ydoc.getText("codemirror");
   const bindingRef = useRef<CodemirrorBinding | null>(null);
 
-  useYJSReplicache(r, editorID, yText);
+  useYJSReflect(r, editorID, yText);
 
-  const awarenessStateFromReplicache = useSubscribe(
+  const awarenessStateFromReflect = useSubscribe(
     r,
     async (tx) =>
       tx
@@ -67,7 +67,7 @@ function ReflectCodeMirror({ userInfo, editorID }: RepCodeMirrorProps) {
   const awarenessRef = useRef(new yprotocolAwareness.Awareness(ydoc));
   const awareness = awarenessRef.current;
 
-  for (const value of awarenessStateFromReplicache) {
+  for (const value of awarenessStateFromReflect) {
     if (typeof value === "string" && awarenessRef.current) {
       yprotocolAwareness.applyAwarenessUpdate(
         awareness,
@@ -142,7 +142,7 @@ function ReflectCodeMirror({ userInfo, editorID }: RepCodeMirrorProps) {
   );
 }
 
-function useYJSReplicache(
+function useYJSReflect(
   r: Reflect<UpdateYJS>,
   editorID: string,
   yText: Y.Text
@@ -152,7 +152,7 @@ function useYJSReplicache(
     return;
   }
 
-  const docStateFromReplicache = useSubscribe(
+  const docStateFromReflect = useSubscribe(
     r,
     async (tx) => {
       const v = await tx.get(editorKey(editorID));
@@ -165,8 +165,8 @@ function useYJSReplicache(
     [editorID]
   );
 
-  if (docStateFromReplicache !== null) {
-    const update = base64.toByteArray(docStateFromReplicache);
+  if (docStateFromReflect !== null) {
+    const update = base64.toByteArray(docStateFromReflect);
     Y.applyUpdateV2(ydoc, update);
   }
 
