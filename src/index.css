@@ -30,3 +30,7 @@
   .CodeMirror {
     height: 100vh !important;
   }
+
+  .CodeMirror-sizer{
+    padding-top: 20px;
+  }
