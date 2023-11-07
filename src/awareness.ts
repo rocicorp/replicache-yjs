@@ -56,6 +56,7 @@ export class Awareness extends Observable<unknown> {
 
     if (added.length || removed.length || updated.length) {
       this.emit("change", [{ added, updated, removed }, "local"]);
+      this.emit("update", [{ added, updated, removed }, "local"]);
     }
   }
   #unsubscribe: () => void;

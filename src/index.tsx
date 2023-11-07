@@ -16,7 +16,7 @@ import "./index.css";
 import { Awareness } from "./awareness.js";
 
 const userID = nanoid();
-const roomID = "my-room";
+const roomID = `r-${Math.floor(new Date().getTime() / (1000 * 60 * 60))}`;
 
 const server: string | undefined = import.meta.env.VITE_REFLECT_URL;
 if (!server) {
@@ -61,6 +61,9 @@ function ReflectCodeMirror({ userInfo, editorID }: RepCodeMirrorProps) {
   return (
     <div className={styles.container}>
       <h1>Reflect + yjs</h1>
+      <h3>
+        <a href="https://hello.reflect.net">hello.reflect.net</a>
+      </h3>
       <CodeMirror
         editorDidMount={(editor) => {
           const binding = new CodemirrorBinding(yText, editor, awareness);
