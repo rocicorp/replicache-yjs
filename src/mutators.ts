@@ -16,8 +16,12 @@
 // thing. The Reflect sync protocol ensures that the server-side result takes
 // precedence over the client-side optimistic result.
 
-import type { WriteTransaction } from "@rocicorp/reflect";
-import { initClientState, updateYJSAwarenessState, putYJSAwarenessState } from "./client-state.js";
+import type {WriteTransaction} from '@rocicorp/reflect';
+import {
+  initClientState,
+  putYJSAwarenessState,
+  updateYJSAwarenessState,
+} from './client-state.js';
 
 export const mutators = {
   initClientState,
@@ -29,22 +33,24 @@ export const mutators = {
 export type M = typeof mutators;
 
 export type UpdateYJS = {
-  updateYJS: (
-    tx: WriteTransaction,
-    { name, update }: { name: string; update: string }
-  ) => Promise<void>;
+  updateYJS: typeof updateYJS;
 };
 
+export type UpdateYJSAwarenessState = {
+  updateYJSAwarenessState: typeof updateYJSAwarenessState;
+};
 
-async function updateYJS(
+export type PutYJSAwarenessState = {
+  putYJSAwarenessState: typeof putYJSAwarenessState;
+};
+
+export async function updateYJS(
   tx: WriteTransaction,
-  { name, update }: { name: string; update: string }
+  {name, update}: {name: string; update: string},
 ) {
-  await tx.put(editorKey(name), update);
+  await tx.set(editorKey(name), update);
 }
-
 
 export function editorKey(name: string): string {
   return `yjs/cm/${name}`;
 }
-

@@ -1,30 +1,62 @@
-import { Observable } from "lib0/observable";
-import type * as Y from "yjs";
-import { Reflect } from "@rocicorp/reflect/client";
-import { ClientID, JSONObject } from "@rocicorp/reflect";
-import { ClientState, listClientStates } from "./client-state";
-import { M } from "./mutators";
+import {ClientID, JSONObject} from '@rocicorp/reflect';
+import {Reflect} from '@rocicorp/reflect/client';
+import {ObservableV2} from 'lib0/observable';
+import type * as Y from 'yjs';
+import {
+  ClientState,
+  listClientStates,
+  putYJSAwarenessState,
+  updateYJSAwarenessState,
+} from './client-state';
 
 type MetaClientState = {
   clock: number;
   lastUpdated: number;
 };
 
-export class Awareness extends Observable<unknown> {
-  #reflect: Reflect<M>;
+type Events = {
+  destroy: (o: Awareness) => unknown;
+  change: (
+    args: {
+      added: number[];
+      updated: number[];
+      removed: number[];
+    },
+    x: 'local',
+  ) => unknown;
+  update: (
+    args: {
+      added: number[];
+      updated: number[];
+      removed: number[];
+    },
+    x: 'local',
+  ) => unknown;
+};
+
+export type AwarenessMutatorDefs = {
+  putYJSAwarenessState: typeof putYJSAwarenessState;
+  updateYJSAwarenessState: typeof updateYJSAwarenessState;
+};
+
+export class Awareness extends ObservableV2<Events> {
+  #reflect: Reflect<AwarenessMutatorDefs>;
 
   #presentClientIDs: string[] = [];
   #clients: Record<ClientID, ClientState> = {};
 
-  public doc: Y.Doc;
-  public clientID: number;
-  public states: Map<number, JSONObject> = new Map();
+  doc: Y.Doc;
+  clientID: number;
+  states: Map<number, JSONObject> = new Map();
+
   // Meta is used to keep track and timeout users who disconnect. Reflect provides this for us, so we don't need to
   // manage it here. Unfortunately, it's expected to exist by various integrations, so it's an empty map.
-  public meta: Map<number, MetaClientState> = new Map();
+  meta: Map<number, MetaClientState> = new Map();
+
   // _checkInterval this would hold a timer to remove users, but Reflects presence already handles this
   // unfortunately it's typed by various integrations
-  public _checkInterval: number = 0;
+  _checkInterval: number = 0;
+
   #handlePresenceChange() {
     const states: Map<number, JSONObject> = new Map();
 
@@ -55,33 +87,35 @@ export class Awareness extends Observable<unknown> {
     this.states = states;
 
     if (added.length || removed.length || updated.length) {
-      this.emit("change", [{ added, updated, removed }, "local"]);
-      this.emit("update", [{ added, updated, removed }, "local"]);
+      this.emit('change', [{added, updated, removed}, 'local']);
+      this.emit('update', [{added, updated, removed}, 'local']);
     }
   }
-  #unsubscribe: () => void;
-  constructor(doc: Y.Doc, reflect: Reflect<M>) {
+
+  readonly #unsubscribe: () => void;
+
+  constructor(doc: Y.Doc, reflect: Reflect<AwarenessMutatorDefs>) {
     super();
     this.doc = doc;
     this.#reflect = reflect;
     this.clientID = doc.clientID;
 
     const unsubscribeToPresence = this.#reflect.subscribeToPresence(
-      (clientIDs) => {
+      clientIDs => {
         this.#presentClientIDs = [...clientIDs];
         this.#handlePresenceChange();
-      }
+      },
     );
 
     const unsubscribe = this.#reflect.subscribe(
-      async (tx) => {
+      async tx => {
         var clientStates = await listClientStates(tx);
-        return Object.fromEntries(clientStates.map((cs) => [cs.id, cs]));
+        return Object.fromEntries(clientStates.map(cs => [cs.id, cs]));
       },
-      (result) => {
+      result => {
         this.#clients = result;
         this.#handlePresenceChange();
-      }
+      },
     );
 
     this.#unsubscribe = () => {
@@ -91,7 +125,7 @@ export class Awareness extends Observable<unknown> {
   }
 
   destroy(): void {
-    this.emit("destroy", [this]);
+    this.emit('destroy', [this]);
     this.setLocalState(null);
     this.#unsubscribe();
     super.destroy();
@@ -105,12 +139,12 @@ export class Awareness extends Observable<unknown> {
     if (state === null) {
       return;
     }
-    this.#reflect.mutate.putYJSAwarenessState({ yjsAwarenessState: state });
+    this.#reflect.mutate.putYJSAwarenessState({yjsAwarenessState: state});
   }
 
   setLocalStateField(field: string, value: JSONObject): void {
     this.#reflect.mutate.updateYJSAwarenessState({
-      yjsAwarenessState: { [field]: value },
+      yjsAwarenessState: {[field]: value},
     });
   }
 
