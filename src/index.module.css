@@ -1,0 +1,15 @@
+@font-face {
+  font-family: 'Muoto 205tf';
+  font-style: normal;
+  font-weight: 100 900;
+  src: url('/muoto-var.ttf') format('truetype-variations');
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
