@@ -3,6 +3,7 @@ import {Reflect} from '@rocicorp/reflect/client';
 import {ObservableV2} from 'lib0/observable';
 import type {Awareness as YJSAwareness} from 'y-protocols/awareness.js';
 import type * as Y from 'yjs';
+import * as f from 'lib0/function';
 import {
   ClientState,
   listClientStates,
@@ -76,13 +77,13 @@ export class Awareness extends ObservableV2<Events> implements YJSAwareness {
     const prevStates = this.states;
     const added: number[] = [];
     const removed: number[] = [];
-    const updated: number[] = [];
-    for (const [yjsClientID, client] of prevStates) {
-      const currClient = states.get(yjsClientID);
-      if (currClient === undefined) {
+    const changed: number[] = [];
+    for (const [yjsClientID, state] of prevStates) {
+      const currState = states.get(yjsClientID);
+      if (currState === undefined) {
         removed.push(yjsClientID);
-      } else if (currClient !== client) {
-        updated.push(yjsClientID);
+      } else if (currState !== state || !f.equalityDeep(currState, state)) {
+        changed.push(yjsClientID);
       }
     }
     for (const yjsClientID of states.keys()) {
@@ -92,12 +93,11 @@ export class Awareness extends ObservableV2<Events> implements YJSAwareness {
     }
     this.states = states;
 
-    if (added.length || removed.length || updated.length) {
-      // TODO(arv): YJS Awareness checks for deep equality here. We should do the
-      // same.
-      // https://github.com/yjs/y-protocols/blob/a4dd5de756f1061eaca9c1b4ebb2013e74987a11/awareness.js#L131-L135
-      this.emit('change', [{added, updated, removed}, 'local']);
-      this.emit('update', [{added, updated, removed}, 'local']);
+    if (added.length || removed.length || changed.length) {
+      this.emit("change", [{ added, updated: changed, removed }, "local"]);
+      // NOTE: with reflect we can't tell if something was set to the same value
+      // because we do not propogate non changes, therefore we don't need to ever call 'update'
+      // this.emit('update', [{added, updated, removed}, 'local']);
     }
   }
 
@@ -131,6 +131,8 @@ export class Awareness extends ObservableV2<Events> implements YJSAwareness {
       unsubscribeToPresence();
       unsubscribe();
     };
+
+    this.setLocalState({});
   }
 
   destroy(): void {
