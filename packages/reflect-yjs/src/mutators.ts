@@ -38,13 +38,15 @@ export async function updateYJS(
   tx: WriteTransaction,
   {name, update}: {name: string; update: string},
 ) {
-  const existing = await tx.get<string>(yjsProviderKey(name));
+  const existing = await tx.get<string>(yjsProviderServerKey(name));
+  const getKeyToSet =
+    tx.location === 'client' ? yjsProviderClientKey : yjsProviderServerKey;
   if (!existing) {
-    await tx.set(yjsProviderKey(name), update);
+    await tx.set(getKeyToSet(name), update);
   } else {
     const updates = [base64.toByteArray(existing), base64.toByteArray(update)];
     const merged = Y.mergeUpdatesV2(updates);
-    await tx.set(yjsProviderKey(name), base64.fromByteArray(merged));
+    await tx.set(getKeyToSet(name), base64.fromByteArray(merged));
   }
 }
 
@@ -52,8 +54,12 @@ function yjsAwarenessPrefix(name: string) {
   return `yjs/awareness/${name}/`;
 }
 
-export function yjsProviderKey(name: string): string {
-  return `yjs/provider/${name}`;
+export function yjsProviderClientKey(name: string): string {
+  return `yjs/provider/client/${name}`;
+}
+
+export function yjsProviderServerKey(name: string): string {
+  return `yjs/provider/server/${name}`;
 }
 
 export function yjsAwarenessKey(
