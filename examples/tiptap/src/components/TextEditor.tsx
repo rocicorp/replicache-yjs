@@ -81,7 +81,7 @@ const userInfo = {
 };
 
 const userID = nanoid();
-const roomID = `r-${Math.floor(new Date().getTime() / (1000 * 60 * 60))}`;
+const roomID = `sekret`; // `r-${Math.floor(new Date().getTime() / (1000 * 60 * 60))}`;
 
 const server: string | undefined = process.env.NEXT_PUBLIC_REFLECT_URL;
 if (!server) {
