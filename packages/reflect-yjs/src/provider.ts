@@ -3,14 +3,13 @@ import * as base64 from 'base64-js';
 import * as Y from 'yjs';
 import {Awareness} from './awareness.js';
 import type {Mutators} from './mutators.js';
-import {yjsProviderClientKey, yjsProviderServerKey} from './mutators.js';
+import {getClientUpdate, getServerUpdate} from './mutators.js';
 
 export class Provider {
   readonly #reflect: Reflect<Mutators>;
   readonly #ydoc: Y.Doc;
   #awareness: Awareness | null = null;
-  readonly #cancelUpdateSubscribe: () => void;
-  readonly #cancelVectorSubscribe: () => void;
+  readonly #cancelSubscribe: () => void;
 
   readonly name: string;
   #vector: Uint8Array | null = null;
@@ -23,32 +22,24 @@ export class Provider {
     ydoc.on('update', this.#handleUpdate);
     ydoc.on('destroy', this.#handleDestroy);
 
-    this.#cancelUpdateSubscribe = reflect.subscribe(
+    this.#cancelSubscribe = reflect.subscribe(
       async tx => {
-        let v = await tx.get(yjsProviderClientKey(this.name));
-        if (typeof v !== 'string') {
-          v = await tx.get(yjsProviderServerKey(this.name));
-        }
-        return typeof v === 'string' ? v : null;
+        const serverUpdate = await getServerUpdate(this.name, tx);
+        return {
+          serverUpdate,
+          clientOverServerUpdate:
+            (await await getClientUpdate(this.name, tx)) ?? serverUpdate,
+        };
       },
-      docStateFromReflect => {
-        if (docStateFromReflect !== null) {
-          const update = base64.toByteArray(docStateFromReflect);
-          Y.applyUpdateV2(ydoc, update);
-        }
-      },
-    );
-
-    this.#cancelVectorSubscribe = reflect.subscribe(
-      async tx => {
-        const v = await tx.get(yjsProviderServerKey(this.name));
-        return typeof v === 'string' ? v : null;
-      },
-      docStateFromServer => {
-        if (docStateFromServer !== null) {
+      ({serverUpdate, clientOverServerUpdate}) => {
+        if (serverUpdate !== undefined) {
           this.#vector = Y.encodeStateVectorFromUpdateV2(
-            base64.toByteArray(docStateFromServer),
+            base64.toByteArray(serverUpdate),
           );
+        }
+        if (clientOverServerUpdate !== undefined) {
+          const update = base64.toByteArray(clientOverServerUpdate);
+          Y.applyUpdateV2(ydoc, update);
         }
       },
     );
@@ -76,8 +67,7 @@ export class Provider {
   };
 
   destroy(): void {
-    this.#cancelUpdateSubscribe();
-    this.#cancelVectorSubscribe();
+    this.#cancelSubscribe();
     this.#vector = null;
     this.#ydoc.off('destroy', this.#handleDestroy);
     this.#ydoc.off('update', this.#handleUpdate);
