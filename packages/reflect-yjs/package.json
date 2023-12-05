@@ -19,8 +19,8 @@
     "check-types": "tsc --noEmit",
     "lint": "eslint --ext .ts,.tsx,.js,.jsx src/",
     "prepack": "npx turbo build",
-    "test": "vitest run",
-    "test:watch": "vitest watch"
+    "test": "vitest run --browser.provider=playwright --browser.name=chromium --browser.headless",
+    "test:watch": "vitest watch --browser.provider=playwright --browser.name=chromium --browser.headless"
   },
   "dependencies": {
     "@rocicorp/reflect": "^0.38.202311200859",
@@ -32,8 +32,10 @@
   "devDependencies": {
     "@rocicorp/eslint-config": "^0.5.1",
     "@rocicorp/prettier-config": "^0.2.0",
+    "@vitest/browser": "^1.0.1",
     "esbuild": "^0.19.4",
-    "vitest": "^0.34.6"
+    "playwright": "^1.39.0",
+    "vitest": "^1.0.1"
   },
   "engines": {
     "node": ">=18"
