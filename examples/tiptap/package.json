@@ -13,15 +13,20 @@
     "check-format": "prettier --check *",
     "watch": "concurrently --kill-others 'npx reflect dev --silence-startup-message' 'npm run dev'"
   },
-  "dependencies": {
+  "peerDependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
     "@radix-ui/react-dialog": "^1.0.2",
     "@radix-ui/react-popover": "^1.0.2",
     "@radix-ui/react-select": "^1.1.1",
     "@radix-ui/react-tabs": "^1.0.1",
     "@radix-ui/react-tooltip": "^1.0.2",
     "@rocicorp/reflect-yjs": "0.0.1",
-    "@tiptap/extension-collaboration": "^2.0.4",
+    "@rocicorp/reflect": "^0.38.202311200859",
     "@tiptap/extension-collaboration-cursor": "^2.0.4",
+    "@tiptap/extension-collaboration": "^2.0.4",
     "@tiptap/extension-highlight": "^2.0.4",
     "@tiptap/extension-image": "^2.0.4",
     "@tiptap/extension-link": "^2.0.4",
@@ -35,20 +40,13 @@
     "@tiptap/react": "^2.0.4",
     "@tiptap/starter-kit": "^2.0.4",
     "@types/node": "^20.3.1",
-    "@types/react": "^18.2.38",
     "@types/react-dom": "^18.2.17",
+    "@types/react": "^18.2.38",
     "clsx": "^2.0.0",
+    "concurrently": "^8.2.2",
     "nanoid": "^5.0.3",
     "next": "^13.5.4",
     "typescript": "^5.3.2",
-    "yjs": "^13.6.10",
-    "@rocicorp/reflect": "^0.38.202311200859"
-  },
-  "peerDependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
-  },
-  "devDependencies": {
-    "concurrently": "^8.2.2"
+    "yjs": "^13.6.10"
   }
 }
