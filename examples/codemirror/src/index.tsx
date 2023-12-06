@@ -10,8 +10,8 @@ import './index.css';
 import styles from './index.module.css';
 import {
   Provider,
+  mutators,
   mutators as yjsMutators,
-  Mutators,
 } from '@rocicorp/reflect-yjs';
 import {UserInfo, randUserInfo} from './user-info.js';
 
@@ -32,7 +32,7 @@ const reflect = new Reflect({
 });
 
 type ReflectCodeMirrorProps = {
-  reflect: Reflect<Mutators>;
+  reflect: Reflect<typeof mutators>;
   name: string;
   userInfo: UserInfo;
 };
