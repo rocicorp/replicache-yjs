@@ -13,26 +13,22 @@
     "preview": "vite preview",
     "watch": "concurrently --kill-others 'npx reflect dev --silence-startup-message' 'VITE_REFLECT_URL=http://127.0.0.1:8080/ npm run dev'"
   },
-  "dependencies": {
-    "@codemirror/lang-javascript": "^6.2.1",
-    "@rocicorp/reflect-yjs": "0.0.1",
-    "monaco-editor": "^0.44.0",
-    "y-monaco": "^0.1.5",
-    "@rocicorp/reflect": "^0.38.202311200859"
-  },
   "devDependencies": {
     "@rocicorp/eslint-config": "^0.5.1",
     "@rocicorp/prettier-config": "^0.2.0",
+    "@rocicorp/reflect-yjs": "0.0.1",
     "@rocicorp/reflect": "^0.38.202311200859",
-    "@types/react": "^18.2.38",
     "@types/react-dom": "^18.2.17",
+    "@types/react": "^18.2.38",
     "@vitejs/plugin-react": "^4.2.0",
     "concurrently": "^8.2.2",
+    "monaco-editor": "^0.44.0",
     "nanoid": "^5.0.3",
-    "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react": "^18.2.0",
     "typescript": "^5.3.2",
-    "vite": "^5.0.2"
+    "vite": "^5.0.2",
+    "y-monaco": "^0.1.5"
   },
   "eslintConfig": {
     "extends": "@rocicorp/eslint-config"
