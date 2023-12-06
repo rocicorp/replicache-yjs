@@ -25,12 +25,12 @@ npm install @rocicorp/reflect-yjs@latest
 
 To explore an example, such as the CodeMirror integration, follow these steps:
 
-1. Close this repository
+1. Clone this repository
 
-```bash
-git clone git@github.com:rocicorp/reflect-yjs.git
-cd reflect-yjs
-```
+   ```bash
+   git clone git@github.com:rocicorp/reflect-yjs.git
+   cd reflect-yjs
+   ```
 
 2. **Install dependencies**
 
