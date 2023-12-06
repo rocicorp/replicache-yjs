@@ -1,13 +1,14 @@
 # `@rocicorp/reflect-yjs`
 
-## Overview
+This library enables storing and syncing Yjs documents via [Reflect](https://reflect.net/).
 
-`@rocicorp/reflect-yjs` is a repository designed to demonstrate the integration of Yjs with Reflect. It provides a Reflect Yjs provider and implements awareness functionality. This repository includes examples for integrating Yjs with various editors like CodeMirror, Monaco and tiptap.
+Live demo at https://type.reflect.net/.
 
 ## Features
 
-- **Reflect Yjs Provider**: An integration layer between Reflect and Yjs.
-- **Awareness Implementation**: Enables tracking and reflecting user presence and changes.
+- **Awareness**: A robust implementation of Yjs "awareness" is included. Awareness is correctly cleaned up in all cases including tab-close, tab/browser-crash, navigation, tab-switch, offline, etc.
+- **Multiple Documents**: A single Reflect room can host any number of Yjs documents efficiently.
+- **Chunking** (soon): Large Yjs documents are automatically broken down into smaller pieces for efficient incremental updates.
 - **Editor Integration Examples**: Contains practical examples for `codemirror-yjs`, `monaco-yjs`, `tiptap-yjs`.
 
 ## Getting Started
