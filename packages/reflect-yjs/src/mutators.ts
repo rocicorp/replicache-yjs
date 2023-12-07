@@ -20,24 +20,89 @@ export async function updateYJS(
   tx: WriteTransaction,
   {name, update}: {name: string; update: string},
 ) {
-  const existing = await tx.get<string>(yjsProviderServerKey(name));
-  const getKeyToSet =
-    tx.location === 'client' ? yjsProviderClientKey : yjsProviderServerKey;
+  const existing = await getServerUpdate(name, tx);
+  const set = tx.location === 'client' ? setClientUpdate : setServerUpdate;
   if (!existing) {
-    await tx.set(getKeyToSet(name), update);
+    await set(name, update, tx);
   } else {
     const updates = [base64.toByteArray(existing), base64.toByteArray(update)];
     const merged = Y.mergeUpdatesV2(updates);
-    await tx.set(getKeyToSet(name), base64.fromByteArray(merged));
+    await set(name, base64.fromByteArray(merged), tx);
   }
 }
 
-export function yjsProviderClientKey(name: string): string {
-  return `yjs/provider/client/${name}`;
+const yjsProviderKeyPrefix = 'yjs/provider/';
+
+function yjsProviderClientUpdateKey(name: string): string {
+  return `${yjsProviderKeyPrefix}client/${name}`;
 }
 
-export function yjsProviderServerKey(name: string): string {
-  return `yjs/provider/server/${name}`;
+function yjsProviderServerUpdatePrefix(name: string): string {
+  return `${yjsProviderKeyPrefix}server/${name}/`;
+}
+
+function setClientUpdate(name: string, update: string, tx: WriteTransaction) {
+  return tx.set(yjsProviderClientUpdateKey(name), update);
+}
+
+async function setServerUpdate(
+  name: string,
+  update: string,
+  tx: WriteTransaction,
+) {
+  const writes = [];
+  let i = 0;
+  const existingEntries = tx
+    .scan({
+      prefix: yjsProviderServerUpdatePrefix(name),
+    })
+    .entries();
+  for (; i * CHUNK_LENGTH < update.length; i++) {
+    const next = await existingEntries.next();
+    const existing = next.done ? undefined : next.value[1];
+    const chunk = update.substring(
+      i * CHUNK_LENGTH,
+      i * CHUNK_LENGTH + CHUNK_LENGTH,
+    );
+    if (existing !== chunk) {
+      writes.push(tx.set(yjsProviderServerKey(name, i), chunk));
+    }
+  }
+  // If the previous value had more chunks than thew new value, delete these
+  // additional chunks.
+  for await (const [key] of existingEntries) {
+    writes.push(tx.del(key));
+  }
+  await Promise.all(writes);
+}
+
+// Supports updates up to length 10^14
+const CHUNK_LENGTH = 10_000;
+export function yjsProviderServerKey(name: string, chunkIndex: number): string {
+  return `${yjsProviderServerUpdatePrefix(name)}${chunkIndex
+    .toString(10)
+    .padStart(10, '0')}`;
+}
+
+export async function getClientUpdate(
+  name: string,
+  tx: ReadTransaction,
+): Promise<string | undefined> {
+  const v = await tx.get(yjsProviderClientUpdateKey(name));
+  return typeof v === 'string' ? v : undefined;
+}
+
+export async function getServerUpdate(
+  name: string,
+  tx: ReadTransaction,
+): Promise<string | undefined> {
+  const chunks = await tx
+    .scan({
+      prefix: yjsProviderServerUpdatePrefix(name),
+    })
+    .values()
+    .toArray();
+  return chunks.length === 0 ? undefined : chunks.join('');
 }
 
 export function yjsAwarenessKey(
