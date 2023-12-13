@@ -15,10 +15,14 @@ type MockedMutator<Fn extends (tx: WriteTransaction, ...args: any[]) => any> =
   MockedFunction<(arg: Parameters<Fn>[1]) => ReturnType<Fn>>;
 
 type Subscribe = Reflect<MutatorDefs>['subscribe'];
+type ExperimentalWatch = Reflect<MutatorDefs>['experimentalWatch'];
 type SubscribeToPresence = Reflect<MutatorDefs>['subscribeToPresence'];
 
 class FakeReflect {
   subscribe: MockedFunction<Subscribe> = vi
+    .fn()
+    .mockReturnValue(() => undefined);
+  experimentalWatch: MockedFunction<ExperimentalWatch> = vi
     .fn()
     .mockReturnValue(() => undefined);
   subscribeToPresence: MockedFunction<SubscribeToPresence> = vi
@@ -50,18 +54,18 @@ suite('Provider', () => {
   });
 
   suite('constructor', () => {
-    test('subscribes at construction time', () => {
+    test('watch at construction time', () => {
       const reflect = fakeReflect();
       new Provider(reflect, 'test', new Doc());
-      expect(reflect.subscribe).toHaveBeenCalledTimes(1);
+      expect(reflect.experimentalWatch).toHaveBeenCalledTimes(1);
     });
   });
 
   test('destroy unsubscribes', () => {
     const reflect = new FakeReflect();
-    reflect.subscribe.mockClear();
-    const unsubscribe = vi.fn();
-    reflect.subscribe.mockImplementationOnce(() => unsubscribe);
+    reflect.experimentalWatch.mockClear();
+    const unwatch = vi.fn();
+    reflect.experimentalWatch.mockImplementationOnce(() => unwatch);
 
     const p = new Provider(
       reflect as unknown as Reflect<Mutators>,
@@ -70,6 +74,6 @@ suite('Provider', () => {
     );
 
     p.destroy();
-    expect(unsubscribe).toHaveBeenCalledTimes(1);
+    expect(unwatch).toHaveBeenCalledTimes(1);
   });
 });
