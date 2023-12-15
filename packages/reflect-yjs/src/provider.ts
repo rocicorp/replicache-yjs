@@ -85,7 +85,7 @@ export class Provider {
               this.#serverUpdateMeta.length,
             );
             this.#vector = Y.encodeStateVectorFromUpdateV2(this.#serverUpdate);
-            Y.applyUpdateV2(ydoc, this.#serverUpdate);
+            Y.applyUpdateV2(ydoc, this.#serverUpdate, this);
           }
         }
         if (isInitial) {
@@ -94,7 +94,7 @@ export class Provider {
           // All other client updates will have originated from this ydoc
           // and thus not need to be applied.
           if (this.#clientUpdate) {
-            Y.applyUpdateV2(ydoc, this.#clientUpdate);
+            Y.applyUpdateV2(ydoc, this.#clientUpdate, this);
           }
         }
       },
@@ -112,7 +112,10 @@ export class Provider {
     return this.#awareness;
   }
 
-  #handleUpdate = async () => {
+  #handleUpdate = async (_update: unknown, origin: unknown) => {
+    if (origin === this) {
+      return;
+    }
     const diffUpdate = this.#vector
       ? Y.encodeStateAsUpdateV2(this.#ydoc, this.#vector)
       : Y.encodeStateAsUpdateV2(this.#ydoc);
