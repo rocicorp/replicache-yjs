@@ -24,7 +24,7 @@ export type UpdateYJSArgs = {
 export function updateYJS(args?: UpdateYJSArgs | undefined) {
   return async function (
     tx: WriteTransaction,
-    {name, update}: {name: string; update: string},
+    {name, id, update}: {name: string; id: string; update: string},
   ) {
     const {validator} = args ?? {};
     if (tx.location === 'server') {
@@ -51,7 +51,7 @@ export function updateYJS(args?: UpdateYJSArgs | undefined) {
       if (validator) {
         throw new Error('validator only supported on server');
       }
-      await setClientUpdate(name, update, tx);
+      await setClientUpdate(name, id, update, tx);
     }
   };
 }
@@ -60,11 +60,15 @@ export function yjsProviderKeyPrefix(name: string): string {
   return `'yjs/provider/${name}/`;
 }
 
-export function yjsProviderClientUpdateKey(name: string): string {
-  return `${yjsProviderKeyPrefix(name)}client`;
+export function yjsProviderClientUpdateKeyPrefix(name: string): string {
+  return `${yjsProviderKeyPrefix(name)}/client/`;
 }
 
-function yjsProviderServerUpdateKeyPrefix(name: string): string {
+function yjsProviderClientUpdateKey(name: string, id: string): string {
+  return `${yjsProviderClientUpdateKeyPrefix(name)}${id}`;
+}
+
+export function yjsProviderServerUpdateKeyPrefix(name: string): string {
   return `${yjsProviderKeyPrefix(name)}/server/`;
 }
 
@@ -83,8 +87,13 @@ export function yjsProviderServerChunkKey(
   return `${yjsProviderServerUpdateChunkKeyPrefix(name)}${chunkHash}`;
 }
 
-function setClientUpdate(name: string, update: string, tx: WriteTransaction) {
-  return tx.set(yjsProviderClientUpdateKey(name), update);
+function setClientUpdate(
+  name: string,
+  id: string,
+  update: string,
+  tx: WriteTransaction,
+) {
+  return tx.set(yjsProviderClientUpdateKey(name, id), update);
 }
 
 const AVG_CHUNK_SIZE_B = 1024;
@@ -145,14 +154,6 @@ async function setServerUpdate(
       (commonSize / size) * 100,
     )}%) reused.`,
   );
-}
-
-export async function getClientUpdate(
-  name: string,
-  tx: ReadTransaction,
-): Promise<string | undefined> {
-  const v = await tx.get(yjsProviderClientUpdateKey(name));
-  return typeof v === 'string' ? v : undefined;
 }
 
 export type ChunkedUpdateMeta = {
