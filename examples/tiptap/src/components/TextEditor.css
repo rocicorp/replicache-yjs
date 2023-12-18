@@ -72,7 +72,7 @@
   color: #0d0d0d;
   display: flex;
   flex-direction: column;
-  height: 96vh;
+  height: 100vh;
 }
 
 .editor__header {
@@ -100,6 +100,8 @@
 }
 
 .editor__content {
+  max-width: 668px;
+  align-self: center;
   flex: 1 1 auto;
   overflow-x: hidden;
   overflow-y: auto;
@@ -109,6 +111,10 @@
 
 .editor__footer {
   align-items: center;
+  box-sizing: border-box;
+  max-width: 700px;
+  width: 100%;
+  align-self: center;
   color: #0d0d0d;
   display: flex;
   flex: 0 0 auto;
@@ -116,7 +122,7 @@
   flex-wrap: wrap;
   font-weight: 600;
   justify-content: space-between;
-  padding: 0.25rem 0.75rem;
+  padding: 1rem;
   white-space: nowrap;
 }
 
